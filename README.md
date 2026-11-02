@@ -1,17 +1,37 @@
-# cloud_escape
+# ☁️ Cloud Escape
+Escape the tech dungeon. Prove you know your cloud.
 
-A new Flutter project.
+Cloud Escape is a Flutter-based educational escape room game where players solve AWS, Linux, Cybersecurity, and Networking challenges to progress through themed rooms and escape the tech dungeon.
 
-## Getting Started
+Designed as a fun and interactive learning experience, Cloud Escape combines quizzes, puzzles, scoring, timers, and gamification to make technical learning more engaging.
+# 🎮 Features
+☁️ AWS Challenge Room (The S3 Vault)
+🔐 Security Challenge Room (The Cipher Chamber)
+🐧 Linux Challenge Room (The Terminal Dungeon)
+🌐 Networking Challenge Room (The Packet Storm)
+✅ Multiple Choice Questions
+✅ Puzzle-Based Challenges
+✅ Score Tracking
+⏱️ Timed Challenges
+😂 Memes and Fun Messages
+🏆 Victory Screen
+# 🏰 Rooms
+☁️ The S3 Vault
+Learn AWS Cloud concepts and services.
 
-This project is a starting point for a Flutter application.
+🐧 The Terminal Dungeon
+Test Linux commands and terminal knowledge.
 
-A few resources to get you started if this is your first Flutter project:
+🔐 The Cipher Chamber
+Explore cybersecurity concepts and best practices.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+🌐 The Packet Storm
+Navigate networking concepts and protocols.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+# 👩‍💻 Author
+Erika Valencia
+
+Created as a learning project for cloud computing, cybersecurity, Linux, networking, and student community engagement.
+
+# 📜 License
+MIT License
