@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'leaderboard.dart';
 import 'leaderboard_screen.dart';
+import 'leaderboard_service.dart';
 import 'questions.dart';
 import 'sound_service.dart';
 
@@ -26,6 +27,9 @@ class _VictoryScreenState extends State<VictoryScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _animController;
   late Animation<double> _scaleAnim;
+  bool _saving = false;
+  bool _saved = false;
+  String? _saveError;
 
   String get _grade {
     final pct = widget.score / widget.total;
@@ -47,11 +51,12 @@ class _VictoryScreenState extends State<VictoryScreen>
 
   String get _meme {
     final pct = widget.score / widget.total;
-    if (pct == 1.0) return '😎 ${widget.playerName} didn\'t miss a single question.\nThe cloud fears them.';
-    if (pct >= 0.8) return '🔥 Almost perfect, ${widget.playerName}!\nYour AWS bill is still scary though.';
-    if (pct >= 0.6) return '👍 Not bad, ${widget.playerName}!\nBut Stack Overflow knows what you Googled.';
-    if (pct >= 0.4) return '😅 Half right, ${widget.playerName}!\nAt least you didn\'t rm -rf /.';
-    return '💀 The cloud has defeated ${widget.playerName}...\nHave you tried turning it off and on again?';
+    final name = widget.playerName;
+    if (pct == 1.0) return '😎 $name didn\'t miss a single question.\nThe cloud fears them.';
+    if (pct >= 0.8) return '🔥 Almost perfect, $name!\nYour AWS bill is still scary though.';
+    if (pct >= 0.6) return '👍 Not bad, $name!\nBut Stack Overflow knows what you Googled.';
+    if (pct >= 0.4) return '😅 Half right, $name!\nAt least you didn\'t rm -rf /.';
+    return '💀 The cloud has defeated $name...\nHave you tried turning it off and on again?';
   }
 
   Color get _gradeColor {
@@ -67,7 +72,7 @@ class _VictoryScreenState extends State<VictoryScreen>
   void initState() {
     super.initState();
 
-    // Save to leaderboard
+    // Save to local leaderboard
     Leaderboard.instance.add(LeaderboardEntry(
       name: widget.playerName,
       categoryId: widget.category.id,
@@ -76,7 +81,9 @@ class _VictoryScreenState extends State<VictoryScreen>
       total: widget.total,
     ));
 
-    // Play fanfare
+    // Save to DynamoDB
+    _saveToCloud();
+
     SoundService.instance.victory();
 
     _animController = AnimationController(
@@ -87,6 +94,23 @@ class _VictoryScreenState extends State<VictoryScreen>
       CurvedAnimation(parent: _animController, curve: Curves.elasticOut),
     );
     _animController.forward();
+  }
+
+  Future<void> _saveToCloud() async {
+    if (!LeaderboardService.instance.isConfigured) return;
+    if (mounted) setState(() => _saving = true);
+    try {
+      await LeaderboardService.instance.saveScore(
+        nickname:      widget.playerName,
+        category:      widget.category.id,
+        categoryEmoji: widget.category.emoji,
+        score:         widget.score,
+        total:         widget.total,
+      );
+      if (mounted) setState(() { _saving = false; _saved = true; });
+    } catch (e) {
+      if (mounted) setState(() { _saving = false; _saveError = 'Could not save to cloud'; });
+    }
   }
 
   @override
@@ -106,7 +130,7 @@ class _VictoryScreenState extends State<VictoryScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Animated grade
+                // Animated grade circle
                 ScaleTransition(
                   scale: _scaleAnim,
                   child: Container(
@@ -155,7 +179,16 @@ class _VictoryScreenState extends State<VictoryScreen>
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
+
+                // Cloud save status
+                if (LeaderboardService.instance.isConfigured)
+                  _CloudSaveStatus(
+                      saving: _saving,
+                      saved: _saved,
+                      error: _saveError),
+
+                const SizedBox(height: 16),
 
                 // Score card
                 Container(
@@ -164,15 +197,12 @@ class _VictoryScreenState extends State<VictoryScreen>
                   decoration: BoxDecoration(
                     color: const Color(0xFF1A242F),
                     borderRadius: BorderRadius.circular(16),
-                    border:
-                        Border.all(color: _gradeColor, width: 2),
+                    border: Border.all(color: _gradeColor, width: 2),
                   ),
                   child: Column(
                     children: [
-                      Text(
-                        widget.category.emoji,
-                        style: const TextStyle(fontSize: 28),
-                      ),
+                      Text(widget.category.emoji,
+                          style: const TextStyle(fontSize: 28)),
                       const SizedBox(height: 4),
                       Text(
                         widget.category.title,
@@ -194,12 +224,13 @@ class _VictoryScreenState extends State<VictoryScreen>
                       ),
                       Text(
                         '${((widget.score / widget.total) * 100).round()}%',
-                        style: TextStyle(color: _gradeColor, fontSize: 18),
+                        style:
+                            TextStyle(color: _gradeColor, fontSize: 18),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 18),
 
                 // Meme
                 Container(
@@ -219,7 +250,7 @@ class _VictoryScreenState extends State<VictoryScreen>
                     ),
                   ),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 24),
 
                 // Leaderboard button
                 SizedBox(
@@ -228,17 +259,16 @@ class _VictoryScreenState extends State<VictoryScreen>
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFFF9900),
                       foregroundColor: Colors.black,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      padding:
+                          const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
                     ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const LeaderboardScreen()),
-                      );
-                    },
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const LeaderboardScreen()),
+                    ),
                     icon: const Icon(Icons.leaderboard),
                     label: const Text(
                       'View Leaderboard',
@@ -249,27 +279,48 @@ class _VictoryScreenState extends State<VictoryScreen>
                 ),
                 const SizedBox(height: 12),
 
-                // Play again / home
+                // Play another room / Home
                 Row(
                   children: [
                     Expanded(
                       child: OutlinedButton.icon(
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.white70,
-                          side: const BorderSide(
-                              color: Colors.white24),
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 14),
+                          side:
+                              const BorderSide(color: Colors.white24),
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(12)),
+                              borderRadius: BorderRadius.circular(12)),
                         ),
-                        onPressed: () {
-                          Navigator.of(context)
-                              .popUntil((r) => r.isFirst);
-                        },
+                        onPressed: () => Navigator.of(context)
+                            .popUntil((r) => r.isFirst),
                         icon: const Icon(Icons.home),
                         label: const Text('Home'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFFFF9900),
+                          side: const BorderSide(
+                              color: Color(0xFFFF9900)),
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: () {
+                          // Pass phone to next player —
+                          // go back to nickname screen
+                          Navigator.of(context).pushNamedAndRemoveUntil(
+                            '/nickname',
+                            (r) => false,
+                          );
+                        },
+                        icon: const Icon(Icons.person_add),
+                        label: const Text('Next Player'),
                       ),
                     ),
                   ],
@@ -278,6 +329,65 @@ class _VictoryScreenState extends State<VictoryScreen>
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ── Cloud save status chip ────────────────────────────────────────────────────
+
+class _CloudSaveStatus extends StatelessWidget {
+  final bool saving;
+  final bool saved;
+  final String? error;
+
+  const _CloudSaveStatus(
+      {required this.saving, required this.saved, required this.error});
+
+  @override
+  Widget build(BuildContext context) {
+    final IconData icon;
+    final String label;
+    final Color color;
+
+    if (saving) {
+      icon  = Icons.cloud_upload;
+      label = 'Saving to global leaderboard...';
+      color = Colors.white38;
+    } else if (saved) {
+      icon  = Icons.cloud_done;
+      label = 'Score saved to global leaderboard ✓';
+      color = Colors.greenAccent;
+    } else if (error != null) {
+      icon  = Icons.cloud_off;
+      label = 'Saved locally only (no internet?)';
+      color = Colors.orange;
+    } else {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          saving
+              ? SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: color),
+                )
+              : Icon(icon, color: color, size: 16),
+          const SizedBox(width: 8),
+          Text(label,
+              style: TextStyle(color: color, fontSize: 12)),
+        ],
       ),
     );
   }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'nickname_screen.dart';
 import 'category_screen.dart';
 import 'leaderboard_screen.dart';
+import 'session.dart';
 
 void main() {
   runApp(const CloudEscapeApp());
@@ -13,6 +15,7 @@ class CloudEscapeApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      title: 'Cloud Escape',
       theme: ThemeData.dark().copyWith(
         colorScheme: const ColorScheme.dark(
           primary: Color(0xFFFF9900),
@@ -39,7 +42,12 @@ class CloudEscapeApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const HomeScreen(),
+      // Named routes so "Next Player" can pop everything and restart
+      initialRoute: '/nickname',
+      routes: {
+        '/nickname': (_) => const NicknameScreen(),
+        '/home':     (_) => const HomeScreen(),
+      },
     );
   }
 }
@@ -49,6 +57,8 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final nickname = Session.instance.nickname;
+
     return Scaffold(
       backgroundColor: const Color(0xFF232F3E),
       body: SafeArea(
@@ -66,7 +76,8 @@ class HomeScreen extends StatelessWidget {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFFFF9900).withValues(alpha: 0.3),
+                        color: const Color(0xFFFF9900)
+                            .withValues(alpha: 0.3),
                         blurRadius: 30,
                         spreadRadius: 5,
                       ),
@@ -75,27 +86,54 @@ class HomeScreen extends StatelessWidget {
                   child: const Text('☁️',
                       style: TextStyle(fontSize: 64)),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 24),
                 const Text(
                   'Cloud Escape',
                   style: TextStyle(
-                    fontSize: 40,
+                    fontSize: 38,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                     letterSpacing: 1,
                   ),
                 ),
+                const SizedBox(height: 6),
+                if (nickname.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1A242F),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                          color: const Color(0xFFFF9900)
+                              .withValues(alpha: 0.4)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.person,
+                            color: Color(0xFFFF9900), size: 16),
+                        const SizedBox(width: 6),
+                        Text(
+                          nickname,
+                          style: const TextStyle(
+                            color: Color(0xFFFF9900),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 const SizedBox(height: 10),
                 const Text(
-                  'The ultimate tech trivia night.\nProve you know your cloud.',
-                  textAlign: TextAlign.center,
+                  'The ultimate tech trivia night.',
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 15,
                     color: Colors.white54,
-                    height: 1.5,
                   ),
                 ),
-                const SizedBox(height: 36),
+                const SizedBox(height: 32),
 
                 // Feature pills
                 Wrap(
@@ -103,14 +141,14 @@ class HomeScreen extends StatelessWidget {
                   runSpacing: 8,
                   alignment: WrapAlignment.center,
                   children: const [
-                    _FeaturePill('🏆 Leaderboard'),
+                    _FeaturePill('🌐 Global Leaderboard'),
                     _FeaturePill('⏰ 15s Timer'),
                     _FeaturePill('😂 Memes'),
                     _FeaturePill('🔔 Sound FX'),
                     _FeaturePill('4 Rooms × 10 Qs'),
                   ],
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 36),
 
                 // Start game
                 SizedBox(
@@ -125,7 +163,7 @@ class HomeScreen extends StatelessWidget {
                     label: const Text('Start Game'),
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
 
                 // Leaderboard
                 SizedBox(
@@ -135,7 +173,8 @@ class HomeScreen extends StatelessWidget {
                       foregroundColor: const Color(0xFFFF9900),
                       side: const BorderSide(
                           color: Color(0xFFFF9900), width: 1.5),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      padding:
+                          const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
                       textStyle: const TextStyle(
@@ -150,10 +189,19 @@ class HomeScreen extends StatelessWidget {
                     label: const Text('Leaderboard'),
                   ),
                 ),
-                const SizedBox(height: 20),
-                const Text(
-                  'v2.0 • Good luck, Cloud Explorer.',
-                  style: TextStyle(color: Colors.white24, fontSize: 12),
+                const SizedBox(height: 12),
+
+                // Change nickname
+                TextButton(
+                  onPressed: () => Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    '/nickname',
+                    (r) => false,
+                  ),
+                  child: const Text(
+                    'Change Nickname',
+                    style: TextStyle(color: Colors.white38, fontSize: 13),
+                  ),
                 ),
               ],
             ),
@@ -176,7 +224,8 @@ class _FeaturePill extends StatelessWidget {
         color: const Color(0xFF1A242F),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-            color: const Color(0xFFFF9900).withValues(alpha: 0.35),
+            color:
+                const Color(0xFFFF9900).withValues(alpha: 0.35),
             width: 1),
       ),
       child: Text(
