@@ -6,6 +6,7 @@ import 'sound_service.dart';
 
 class QuestionScreen extends StatefulWidget {
   final Category category;
+  final List<Question> questions; // pre-shuffled 10-question sample
   final int questionIndex;
   final int score;
   final String playerName;
@@ -13,6 +14,7 @@ class QuestionScreen extends StatefulWidget {
   const QuestionScreen({
     super.key,
     required this.category,
+    required this.questions,
     required this.questionIndex,
     required this.score,
     required this.playerName,
@@ -33,11 +35,8 @@ class _QuestionScreenState extends State<QuestionScreen>
   late AnimationController _shakeController;
   late Animation<double> _shakeAnimation;
 
-  Question get _question =>
-      widget.category.questions[widget.questionIndex];
-
-  bool get _isLastQuestion =>
-      widget.questionIndex >= widget.category.questions.length - 1;
+  Question get _question => widget.questions[widget.questionIndex];
+  bool get _isLastQuestion => widget.questionIndex >= widget.questions.length - 1;
 
   @override
   void initState() {
@@ -49,8 +48,7 @@ class _QuestionScreenState extends State<QuestionScreen>
       duration: const Duration(milliseconds: 400),
     );
     _shakeAnimation = Tween<double>(begin: 0, end: 12).animate(
-      CurvedAnimation(
-          parent: _shakeController, curve: Curves.elasticIn),
+      CurvedAnimation(parent: _shakeController, curve: Curves.elasticIn),
     );
 
     _startTimer();
@@ -61,13 +59,8 @@ class _QuestionScreenState extends State<QuestionScreen>
       if (!mounted) return;
       if (_answered) { t.cancel(); return; }
       setState(() => _timeLeft--);
-      if (_timeLeft > 0 && _timeLeft <= 5) {
-        SoundService.instance.tick();
-      }
-      if (_timeLeft <= 0) {
-        t.cancel();
-        _onTimeUp();
-      }
+      if (_timeLeft > 0 && _timeLeft <= 5) SoundService.instance.tick();
+      if (_timeLeft <= 0) { t.cancel(); _onTimeUp(); }
     });
   }
 
@@ -83,10 +76,7 @@ class _QuestionScreenState extends State<QuestionScreen>
     if (_answered) return;
     _timer?.cancel();
     final correct = index == _question.correctIndex;
-    setState(() {
-      _selectedIndex = index;
-      _answered = true;
-    });
+    setState(() { _selectedIndex = index; _answered = true; });
     if (correct) {
       SoundService.instance.correct();
     } else {
@@ -104,20 +94,11 @@ class _QuestionScreenState extends State<QuestionScreen>
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1A242F),
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
-          timeUp
-              ? '⏰ Time\'s Up!'
-              : correct
-                  ? '✅ Access Granted!'
-                  : '❌ Access Denied!',
+          timeUp ? '⏰ Time\'s Up!' : correct ? '✅ Access Granted!' : '❌ Access Denied!',
           style: TextStyle(
-            color: timeUp
-                ? Colors.orange
-                : correct
-                    ? Colors.greenAccent
-                    : Colors.redAccent,
+            color: timeUp ? Colors.orange : correct ? Colors.greenAccent : Colors.redAccent,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -132,8 +113,7 @@ class _QuestionScreenState extends State<QuestionScreen>
               Text(
                 _question.options[_question.correctIndex],
                 style: const TextStyle(
-                    color: Colors.greenAccent,
-                    fontWeight: FontWeight.bold),
+                    color: Colors.greenAccent, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
             ],
@@ -168,8 +148,7 @@ class _QuestionScreenState extends State<QuestionScreen>
               foregroundColor: Colors.black,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8)),
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 20, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             ),
             onPressed: () {
               Navigator.pop(ctx);
@@ -192,7 +171,7 @@ class _QuestionScreenState extends State<QuestionScreen>
         MaterialPageRoute(
           builder: (_) => VictoryScreen(
             score: newScore,
-            total: widget.category.questions.length,
+            total: widget.questions.length,
             playerName: widget.playerName,
             category: widget.category,
           ),
@@ -204,6 +183,7 @@ class _QuestionScreenState extends State<QuestionScreen>
         MaterialPageRoute(
           builder: (_) => QuestionScreen(
             category: widget.category,
+            questions: widget.questions, // same shuffled list for this run
             questionIndex: widget.questionIndex + 1,
             score: newScore,
             playerName: widget.playerName,
@@ -237,8 +217,8 @@ class _QuestionScreenState extends State<QuestionScreen>
   @override
   Widget build(BuildContext context) {
     final q = _question;
-    final progress =
-        (widget.questionIndex + 1) / widget.category.questions.length;
+    final total = widget.questions.length;
+    final progress = (widget.questionIndex + 1) / total;
 
     final timerColor = _timeLeft > 10
         ? Colors.greenAccent
@@ -252,22 +232,16 @@ class _QuestionScreenState extends State<QuestionScreen>
         backgroundColor: const Color(0xFF1A242F),
         title: Text('${widget.category.emoji} ${widget.category.roomName}'),
         actions: [
-          // Sound toggle
           IconButton(
             icon: Icon(
-              SoundService.instance.enabled
-                  ? Icons.volume_up
-                  : Icons.volume_off,
+              SoundService.instance.enabled ? Icons.volume_up : Icons.volume_off,
               color: Colors.white54,
             ),
-            onPressed: () =>
-                setState(() => SoundService.instance.toggle()),
+            onPressed: () => setState(() => SoundService.instance.toggle()),
           ),
-          // Score chip
           Container(
             margin: const EdgeInsets.only(right: 12),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
               color: const Color(0xFFFF9900),
               borderRadius: BorderRadius.circular(20),
@@ -276,13 +250,11 @@ class _QuestionScreenState extends State<QuestionScreen>
               children: [
                 const Icon(Icons.star, color: Colors.black, size: 16),
                 const SizedBox(width: 4),
-                Text(
-                  '${widget.score}',
-                  style: const TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14),
-                ),
+                Text('${widget.score}',
+                    style: const TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14)),
               ],
             ),
           ),
@@ -294,11 +266,7 @@ class _QuestionScreenState extends State<QuestionScreen>
           offset: Offset(
             _shakeController.isAnimating
                 ? (_shakeAnimation.value *
-                    ((_shakeController.value * 10)
-                            .round()
-                            .isEven
-                        ? 1
-                        : -1))
+                    ((_shakeController.value * 10).round().isEven ? 1 : -1))
                 : 0,
             0,
           ),
@@ -310,22 +278,18 @@ class _QuestionScreenState extends State<QuestionScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Player name + progress
+                // Player + progress
                 Row(
                   children: [
                     const Icon(Icons.person, color: Colors.white38, size: 16),
                     const SizedBox(width: 4),
-                    Text(
-                      widget.playerName,
-                      style: const TextStyle(
-                          color: Colors.white54, fontSize: 13),
-                    ),
+                    Text(widget.playerName,
+                        style: const TextStyle(
+                            color: Colors.white54, fontSize: 13)),
                     const Spacer(),
-                    Text(
-                      'Q${widget.questionIndex + 1}/${widget.category.questions.length}',
-                      style: const TextStyle(
-                          color: Colors.white54, fontSize: 13),
-                    ),
+                    Text('Q${widget.questionIndex + 1}/$total',
+                        style: const TextStyle(
+                            color: Colors.white54, fontSize: 13)),
                   ],
                 ),
                 const SizedBox(height: 6),
@@ -347,14 +311,11 @@ class _QuestionScreenState extends State<QuestionScreen>
                   children: [
                     Icon(Icons.timer, color: timerColor, size: 20),
                     const SizedBox(width: 6),
-                    Text(
-                      '$_timeLeft s',
-                      style: TextStyle(
-                        color: timerColor,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    Text('$_timeLeft s',
+                        style: TextStyle(
+                            color: timerColor,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold)),
                   ],
                 ),
                 const SizedBox(height: 6),
@@ -363,8 +324,7 @@ class _QuestionScreenState extends State<QuestionScreen>
                   child: LinearProgressIndicator(
                     value: _timeLeft / _timerSeconds,
                     backgroundColor: const Color(0xFF1A242F),
-                    valueColor:
-                        AlwaysStoppedAnimation<Color>(timerColor),
+                    valueColor: AlwaysStoppedAnimation<Color>(timerColor),
                     minHeight: 6,
                   ),
                 ),
@@ -376,8 +336,7 @@ class _QuestionScreenState extends State<QuestionScreen>
                   decoration: BoxDecoration(
                     color: const Color(0xFF1A242F),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                        color: const Color(0xFF3A4F63), width: 1),
+                    border: Border.all(color: const Color(0xFF3A4F63), width: 1),
                   ),
                   child: Text(
                     q.question,
@@ -398,7 +357,7 @@ class _QuestionScreenState extends State<QuestionScreen>
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: q.options.length,
                     itemBuilder: (_, i) {
-                      final labels = ['A', 'B', 'C', 'D'];
+                      const labels = ['A', 'B', 'C', 'D'];
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 10),
                         child: GestureDetector(
@@ -410,8 +369,8 @@ class _QuestionScreenState extends State<QuestionScreen>
                             decoration: BoxDecoration(
                               color: _buttonColor(i),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                  color: _buttonBorder(i), width: 2),
+                              border:
+                                  Border.all(color: _buttonBorder(i), width: 2),
                             ),
                             child: Row(
                               children: [
@@ -421,30 +380,21 @@ class _QuestionScreenState extends State<QuestionScreen>
                                   alignment: Alignment.center,
                                   decoration: BoxDecoration(
                                     color: const Color(0xFFFF9900),
-                                    borderRadius:
-                                        BorderRadius.circular(8),
+                                    borderRadius: BorderRadius.circular(8),
                                   ),
-                                  child: Text(
-                                    labels[i],
-                                    style: const TextStyle(
-                                      color: Colors.black,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                    ),
-                                  ),
+                                  child: Text(labels[i],
+                                      style: const TextStyle(
+                                          color: Colors.black,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14)),
                                 ),
                                 const SizedBox(width: 14),
                                 Expanded(
-                                  child: Text(
-                                    q.options[i],
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 15,
-                                    ),
-                                  ),
+                                  child: Text(q.options[i],
+                                      style: const TextStyle(
+                                          color: Colors.white, fontSize: 15)),
                                 ),
-                                if (_answered &&
-                                    i == _question.correctIndex)
+                                if (_answered && i == _question.correctIndex)
                                   const Icon(Icons.check_circle,
                                       color: Colors.greenAccent),
                                 if (_answered &&

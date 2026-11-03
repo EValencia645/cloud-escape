@@ -19,11 +19,15 @@ class PlayerEntryScreen extends StatelessWidget {
   }
 
   void _start(BuildContext context) {
+    // Shuffle the full bank and pick 10 — fresh every time
+    final randomQuestions = category.randomSample(count: 10);
+
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
         builder: (_) => QuestionScreen(
           category: category,
+          questions: randomQuestions,
           questionIndex: 0,
           score: 0,
           playerName: Session.instance.nickname,
@@ -61,12 +65,32 @@ class PlayerEntryScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  '${category.questions.length} questions • 15 seconds each',
-                  style:
-                      const TextStyle(color: Colors.white54, fontSize: 14),
+                // Show pool size and how many will be drawn
+                RichText(
+                  textAlign: TextAlign.center,
+                  text: TextSpan(
+                    style: const TextStyle(
+                        color: Colors.white54, fontSize: 14),
+                    children: [
+                      const TextSpan(text: '10 random questions from a pool of '),
+                      TextSpan(
+                        text: '${category.questions.length}',
+                        style: TextStyle(
+                            color: _accent, fontWeight: FontWeight.bold),
+                      ),
+                      const TextSpan(text: '  •  15 s each'),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 6),
+                Text(
+                  '🎲 Different questions every run!',
+                  style: TextStyle(
+                      color: _accent.withValues(alpha: 0.8),
+                      fontSize: 13,
+                      fontStyle: FontStyle.italic),
+                ),
+                const SizedBox(height: 36),
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -111,9 +135,9 @@ class PlayerEntryScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(12)),
                     ),
                     onPressed: () => _start(context),
-                    icon: const Icon(Icons.play_arrow),
+                    icon: const Icon(Icons.shuffle),
                     label: const Text(
-                      'Start Challenge',
+                      'Deal My Questions',
                       style: TextStyle(
                           fontSize: 18, fontWeight: FontWeight.bold),
                     ),
