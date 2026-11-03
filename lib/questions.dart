@@ -6,7 +6,7 @@ class Question {
   final int correctIndex;
   final String meme;
 
-  const Question({
+  Question({
     required this.question,
     required this.options,
     required this.correctIndex,
@@ -21,7 +21,8 @@ class Category {
   final String roomName;
   final List<Question> questions; // full bank (20)
 
-  const Category({
+  // Not const — keeps questions as a runtime list so shuffling always works
+  Category({
     required this.id,
     required this.emoji,
     required this.title,
@@ -30,8 +31,11 @@ class Category {
   });
 
   /// Returns a shuffled random sample of [count] questions from the bank.
+  /// Uses a time-based seed so each call produces a genuinely different order,
+  /// including on Flutter web where Random() can be deterministic.
   List<Question> randomSample({int count = 10}) {
-    final shuffled = [...questions]..shuffle(Random());
+    final rng = Random(DateTime.now().microsecondsSinceEpoch);
+    final shuffled = [...questions]..shuffle(rng);
     return shuffled.take(count).toList();
   }
 }
@@ -844,3 +848,5 @@ final List<Category> allCategories = [
     ],
   ),
 ];
+
+
