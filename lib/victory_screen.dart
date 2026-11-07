@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'leaderboard.dart';
 import 'leaderboard_screen.dart';
 import 'leaderboard_service.dart';
 import 'questions.dart';
@@ -72,16 +71,7 @@ class _VictoryScreenState extends State<VictoryScreen>
   void initState() {
     super.initState();
 
-    // Save to local leaderboard
-    Leaderboard.instance.add(LeaderboardEntry(
-      name: widget.playerName,
-      categoryId: widget.category.id,
-      categoryEmoji: widget.category.emoji,
-      score: widget.score,
-      total: widget.total,
-    ));
-
-    // Save to DynamoDB
+    // Save to DynamoDB session
     _saveToCloud();
 
     SoundService.instance.victory();

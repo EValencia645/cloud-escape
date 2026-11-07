@@ -1,5 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'leaderboard.dart';
+import 'package:flutter/services.dart';
 import 'leaderboard_service.dart';
 import 'api_config.dart';
 
@@ -10,120 +11,192 @@ class LeaderboardScreen extends StatefulWidget {
   State<LeaderboardScreen> createState() => _LeaderboardScreenState();
 }
 
-class _LeaderboardScreenState extends State<LeaderboardScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabs;
+class _LeaderboardScreenState extends State<LeaderboardScreen> {
+  final _svc = LeaderboardService.instance;
 
-  // Remote (DynamoDB) state
-  List<RemoteScore> _remoteScores = [];
-  bool _loadingRemote = false;
-  String? _remoteError;
-
-  // Local (in-memory) scores — still shown as fallback
-  List<LeaderboardEntry> get _localScores => Leaderboard.instance.entries;
-
-  final bool _apiConfigured = LeaderboardService.instance.isConfigured;
+  List<RemoteScore> _scores = [];
+  bool _loading = false;
+  String? _error;
+  Timer? _autoRefresh;
+  DateTime? _lastRefreshed;
 
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: _apiConfigured ? 2 : 1, vsync: this);
-    if (_apiConfigured) _fetchRemote();
-  }
-
-  Future<void> _fetchRemote() async {
-    setState(() { _loadingRemote = true; _remoteError = null; });
-    try {
-      final scores = await LeaderboardService.instance.fetchScores();
-      if (mounted) setState(() { _remoteScores = scores; _loadingRemote = false; });
-    } catch (e) {
-      if (mounted) setState(() { _remoteError = e.toString(); _loadingRemote = false; });
+    if (_svc.isConfigured && _svc.hasSession) {
+      _fetch();
+      // Auto-refresh every 10 s so everyone watching sees live scores
+      _autoRefresh = Timer.periodic(
+        const Duration(seconds: 10),
+        (_) => _fetch(),
+      );
     }
   }
 
   @override
   void dispose() {
-    _tabs.dispose();
+    _autoRefresh?.cancel();
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF232F3E),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF1A242F),
-        title: const Text('🏆 Leaderboard'),
-        centerTitle: true,
-        bottom: _apiConfigured
-            ? TabBar(
-                controller: _tabs,
-                indicatorColor: const Color(0xFFFF9900),
-                labelColor: const Color(0xFFFF9900),
-                unselectedLabelColor: Colors.white38,
-                tabs: const [
-                  Tab(text: '🌐 Global'),
-                  Tab(text: '📱 This Session'),
-                ],
-              )
-            : null,
-        actions: [
-          if (_apiConfigured)
-            IconButton(
-              icon: const Icon(Icons.refresh, color: Colors.white54),
-              onPressed: _fetchRemote,
+  Future<void> _fetch() async {
+    if (!mounted) return;
+    setState(() { _loading = true; _error = null; });
+    try {
+      final scores = await _svc.fetchScores();
+      if (mounted) {
+        setState(() {
+          _scores        = scores;
+          _loading       = false;
+          _lastRefreshed = DateTime.now();
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() { _loading = false; _error = e.toString(); });
+    }
+  }
+
+  // ── No API configured ─────────────────────────────────────────────────────
+  Widget _notConfigured() => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text('🔧', style: TextStyle(fontSize: 56)),
+          const SizedBox(height: 16),
+          const Text('Backend not set up yet',
+              style: TextStyle(color: Colors.white, fontSize: 20,
+                  fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          const Text(
+            'Follow the steps in backend/README.md\nto deploy the Lambda + DynamoDB,\nthen paste your API URL into api_config.dart.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.white54, fontSize: 14, height: 1.6),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1A242F),
+              borderRadius: BorderRadius.circular(8),
             ),
+            child: Text(
+              apiBaseUrl,
+              style: const TextStyle(color: Color(0xFFFF9900),
+                  fontSize: 11, fontFamily: 'monospace'),
+            ),
+          ),
         ],
       ),
-      body: _apiConfigured
-          ? TabBarView(
-              controller: _tabs,
-              children: [
-                _RemoteLeaderboard(
-                  scores: _remoteScores,
-                  loading: _loadingRemote,
-                  error: _remoteError,
-                  onRetry: _fetchRemote,
-                ),
-                _LocalLeaderboard(entries: _localScores),
-              ],
-            )
-          : _LocalLeaderboard(entries: _localScores),
-    );
-  }
-}
+    ),
+  );
 
-// ── Remote (DynamoDB) tab ─────────────────────────────────────────────────────
-
-class _RemoteLeaderboard extends StatelessWidget {
-  final List<RemoteScore> scores;
-  final bool loading;
-  final String? error;
-  final VoidCallback onRetry;
-
-  const _RemoteLeaderboard({
-    required this.scores,
-    required this.loading,
-    required this.error,
-    required this.onRetry,
-  });
+  // ── No session started ────────────────────────────────────────────────────
+  Widget _noSession() => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text('🎮', style: TextStyle(fontSize: 56)),
+          const SizedBox(height: 16),
+          const Text('No active session',
+              style: TextStyle(color: Colors.white, fontSize: 20,
+                  fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          const Text(
+            'Go to Home → Start New Session\nto create a session for your trivia night.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.white54, fontSize: 14, height: 1.6),
+          ),
+        ],
+      ),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
-    if (loading) {
+    if (!_svc.isConfigured) return _scaffold(_notConfigured());
+    if (!_svc.hasSession)   return _scaffold(_noSession());
+
+    final session = _svc.activeSession!;
+
+    return _scaffold(
+      Column(
+        children: [
+          // ── Session header ───────────────────────────────────────────────
+          Container(
+            color: const Color(0xFF1A242F),
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.circle, color: Colors.greenAccent, size: 10),
+                    const SizedBox(width: 6),
+                    Text(
+                      session.sessionName,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16),
+                    ),
+                    const Spacer(),
+                    if (_lastRefreshed != null)
+                      Text(
+                        'Updated ${_timeAgo(_lastRefreshed!)}',
+                        style: const TextStyle(color: Colors.white38, fontSize: 11),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Row(
+                  children: [
+                    const Icon(Icons.access_time, color: Colors.white38, size: 12),
+                    const SizedBox(width: 4),
+                    Text(session.formattedTime,
+                        style: const TextStyle(
+                            color: Colors.white38, fontSize: 11)),
+                    const Spacer(),
+                    Text(
+                      '${_scores.length} player${_scores.length == 1 ? '' : 's'}',
+                      style: const TextStyle(
+                          color: Color(0xFFFF9900),
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const Divider(color: Colors.white12, height: 1),
+
+          // ── Body ─────────────────────────────────────────────────────────
+          Expanded(child: _body()),
+        ],
+      ),
+      session: session,
+    );
+  }
+
+  Widget _body() {
+    if (_loading && _scores.isEmpty) {
       return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             CircularProgressIndicator(color: Color(0xFFFF9900)),
-            SizedBox(height: 16),
-            Text('Fetching global scores...',
-                style: TextStyle(color: Colors.white54)),
+            SizedBox(height: 14),
+            Text('Loading scores...', style: TextStyle(color: Colors.white54)),
           ],
         ),
       );
     }
-    if (error != null) {
+
+    if (_error != null && _scores.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
@@ -133,21 +206,15 @@ class _RemoteLeaderboard extends StatelessWidget {
               const Text('⚠️', style: TextStyle(fontSize: 48)),
               const SizedBox(height: 12),
               const Text('Could not load scores',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
+                  style: TextStyle(color: Colors.white, fontSize: 18,
                       fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
-              Text(
-                apiBaseUrl.contains('YOUR_API_ID')
-                    ? 'API not configured yet.\nSee backend/README.md to set up DynamoDB.'
-                    : error!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white54, fontSize: 13),
-              ),
+              Text(_error!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white54, fontSize: 13)),
               const SizedBox(height: 20),
               ElevatedButton.icon(
-                onPressed: onRetry,
+                onPressed: _fetch,
                 icon: const Icon(Icons.refresh),
                 label: const Text('Retry'),
               ),
@@ -156,20 +223,19 @@ class _RemoteLeaderboard extends StatelessWidget {
         ),
       );
     }
-    if (scores.isEmpty) {
+
+    if (_scores.isEmpty) {
       return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text('🌐', style: TextStyle(fontSize: 56)),
+            Text('🎯', style: TextStyle(fontSize: 56)),
             SizedBox(height: 16),
-            Text('No global scores yet!',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
+            Text('Waiting for players...',
+                style: TextStyle(color: Colors.white, fontSize: 20,
                     fontWeight: FontWeight.bold)),
             SizedBox(height: 8),
-            Text('Be the first to get on the board.',
+            Text('Scores appear here as people finish.',
                 style: TextStyle(color: Colors.white54)),
           ],
         ),
@@ -178,21 +244,141 @@ class _RemoteLeaderboard extends StatelessWidget {
 
     return RefreshIndicator(
       color: const Color(0xFFFF9900),
-      onRefresh: () async => onRetry(),
-      child: Column(
-        children: [
-          if (scores.length >= 3) _Podium(scores: scores),
-          const Divider(color: Colors.white12, height: 1),
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 14),
-              itemCount: scores.length,
-              itemBuilder: (_, i) => _RemoteRow(score: scores[i], rank: i + 1),
+      onRefresh: _fetch,
+      child: CustomScrollView(
+        slivers: [
+          // Podium (top 3)
+          if (_scores.length >= 2)
+            SliverToBoxAdapter(child: _Podium(scores: _scores)),
+
+          if (_scores.length >= 2)
+            const SliverToBoxAdapter(
+                child: Divider(color: Colors.white12, height: 1)),
+
+          // Full ranked list
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(14, 8, 14, 80),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (_, i) => _ScoreRow(score: _scores[i], rank: i + 1),
+                childCount: _scores.length,
+              ),
             ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _scaffold(Widget body, {GameSession? session}) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF232F3E),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF1A242F),
+        title: const Text('🏆 Live Leaderboard'),
+        centerTitle: true,
+        actions: [
+          if (_svc.isConfigured && _svc.hasSession) ...[
+            // Manual refresh
+            _loading
+                ? const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 14),
+                    child: SizedBox(
+                      width: 18, height: 18,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white54),
+                    ),
+                  )
+                : IconButton(
+                    icon: const Icon(Icons.refresh, color: Colors.white54),
+                    onPressed: _fetch,
+                  ),
+            // Session menu
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert, color: Colors.white54),
+              color: const Color(0xFF1A242F),
+              onSelected: (v) => _onMenu(v, context),
+              itemBuilder: (_) => [
+                const PopupMenuItem(
+                  value: 'copy_id',
+                  child: Row(children: [
+                    Icon(Icons.copy, color: Colors.white54, size: 18),
+                    SizedBox(width: 10),
+                    Text('Copy Session ID',
+                        style: TextStyle(color: Colors.white)),
+                  ]),
+                ),
+                const PopupMenuItem(
+                  value: 'clear',
+                  child: Row(children: [
+                    Icon(Icons.delete_outline, color: Colors.redAccent, size: 18),
+                    SizedBox(width: 10),
+                    Text('Clear All Scores',
+                        style: TextStyle(color: Colors.redAccent)),
+                  ]),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+      body: body,
+    );
+  }
+
+  Future<void> _onMenu(String action, BuildContext ctx) {
+    if (action == 'copy_id') return _copySessionId(ctx);
+    if (action == 'clear')   return _confirmClear(ctx);
+    return Future.value();
+  }
+
+  Future<void> _copySessionId(BuildContext ctx) async {
+    if (!_svc.hasSession) return;
+    final messenger = ScaffoldMessenger.of(ctx);
+    await Clipboard.setData(
+        ClipboardData(text: _svc.activeSession!.sessionId));
+    if (!mounted) return;
+    messenger.showSnackBar(const SnackBar(
+      content: Text('Session ID copied to clipboard'),
+      backgroundColor: Color(0xFF1A242F),
+      duration: Duration(seconds: 2),
+    ));
+  }
+
+  Future<void> _confirmClear(BuildContext ctx) async {
+    final confirm = await showDialog<bool>(
+      context: ctx,
+      builder: (dlg) => AlertDialog(
+        backgroundColor: const Color(0xFF1A242F),
+        title: const Text('Clear all scores?',
+            style: TextStyle(color: Colors.white)),
+        content: const Text(
+          'This permanently deletes all scores in this session.',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(dlg, false),
+              child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(dlg, true),
+              child: const Text('Clear',
+                  style: TextStyle(color: Colors.redAccent))),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      await _svc.clearSession();
+      if (!mounted) return;
+      setState(() { _scores = []; });
+    }
+  }
+
+  String _timeAgo(DateTime dt) {
+    final diff = DateTime.now().difference(dt).inSeconds;
+    if (diff < 10) return 'just now';
+    if (diff < 60) return '${diff}s ago';
+    return '${diff ~/ 60}m ago';
   }
 }
 
@@ -211,12 +397,12 @@ class _Podium extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _PodiumSlot(score: scores[1], rank: 2, height: 75),
+          if (scores.length > 1) _PodiumSlot(score: scores[1], rank: 2, height: 76),
           const SizedBox(width: 12),
-          _PodiumSlot(score: scores[0], rank: 1, height: 105),
+          _PodiumSlot(score: scores[0], rank: 1, height: 108),
           const SizedBox(width: 12),
           if (scores.length > 2)
-            _PodiumSlot(score: scores[2], rank: 3, height: 55)
+            _PodiumSlot(score: scores[2], rank: 3, height: 56)
           else
             const SizedBox(width: 82),
         ],
@@ -229,15 +415,10 @@ class _PodiumSlot extends StatelessWidget {
   final RemoteScore score;
   final int rank;
   final double height;
-  const _PodiumSlot(
-      {required this.score, required this.rank, required this.height});
+  const _PodiumSlot({required this.score, required this.rank, required this.height});
 
   static const _medals = ['🥇', '🥈', '🥉'];
-  static const _colors = [
-    Color(0xFFFFD700),
-    Color(0xFFC0C0C0),
-    Color(0xFFCD7F32),
-  ];
+  static const _colors = [Color(0xFFFFD700), Color(0xFFC0C0C0), Color(0xFFCD7F32)];
 
   @override
   Widget build(BuildContext context) {
@@ -245,32 +426,40 @@ class _PodiumSlot extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(_medals[rank - 1], style: const TextStyle(fontSize: 26)),
+        if (rank == 1)
+          const Text('👑', style: TextStyle(fontSize: 22)),
+        Text(_medals[rank - 1], style: const TextStyle(fontSize: 24)),
         const SizedBox(height: 4),
         Text(score.categoryEmoji, style: const TextStyle(fontSize: 16)),
         const SizedBox(height: 4),
         SizedBox(
-          width: 86,
+          width: 88,
           child: Text(
             score.nickname,
             textAlign: TextAlign.center,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.bold,
-              fontSize: rank == 1 ? 14 : 12,
-            ),
+                color: color,
+                fontWeight: FontWeight.bold,
+                fontSize: rank == 1 ? 14 : 12),
           ),
         ),
         const SizedBox(height: 2),
-        Text(
-          '${score.score}/${score.total}',
-          style: const TextStyle(color: Colors.white54, fontSize: 11),
-        ),
+        Text('${score.score}/${score.total}',
+            style: const TextStyle(color: Colors.white54, fontSize: 11)),
+        Text('${score.percentage}%',
+            style: TextStyle(
+                color: score.percentage >= 80
+                    ? Colors.greenAccent
+                    : score.percentage >= 50
+                        ? Colors.orange
+                        : Colors.redAccent,
+                fontSize: 11,
+                fontWeight: FontWeight.bold)),
         const SizedBox(height: 6),
         Container(
-          width: 78,
+          width: 80,
           height: height,
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.13),
@@ -285,23 +474,21 @@ class _PodiumSlot extends StatelessWidget {
             ),
           ),
           alignment: Alignment.center,
-          child: Text(
-            '$rank',
-            style: TextStyle(
-                color: color, fontSize: 26, fontWeight: FontWeight.bold),
-          ),
+          child: Text('$rank',
+              style: TextStyle(
+                  color: color, fontSize: 28, fontWeight: FontWeight.bold)),
         ),
       ],
     );
   }
 }
 
-// ── Remote row ────────────────────────────────────────────────────────────────
+// ── Score row ─────────────────────────────────────────────────────────────────
 
-class _RemoteRow extends StatelessWidget {
+class _ScoreRow extends StatelessWidget {
   final RemoteScore score;
   final int rank;
-  const _RemoteRow({required this.score, required this.rank});
+  const _ScoreRow({required this.score, required this.rank});
 
   Color get _rankColor {
     if (rank == 1) return const Color(0xFFFFD700);
@@ -312,7 +499,7 @@ class _RemoteRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pct = score.percentage / 100;
+    final pct      = score.percentage / 100;
     final barColor = pct >= 0.8
         ? Colors.greenAccent
         : pct >= 0.5
@@ -326,24 +513,27 @@ class _RemoteRow extends StatelessWidget {
         color: const Color(0xFF1A242F),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: rank <= 3
-              ? _rankColor.withValues(alpha: 0.4)
-              : Colors.white12,
+          color: rank <= 3 ? _rankColor.withValues(alpha: 0.45) : Colors.white12,
           width: rank <= 3 ? 1.5 : 1,
         ),
       ),
       child: Row(
         children: [
+          // Rank
           SizedBox(
-            width: 32,
-            child: Text('#$rank',
-                style: TextStyle(
-                    color: _rankColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15)),
+            width: 36,
+            child: rank == 1
+                ? const Text('👑', style: TextStyle(fontSize: 20))
+                : Text('#$rank',
+                    style: TextStyle(
+                        color: _rankColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15)),
           ),
+          // Category emoji
           Text(score.categoryEmoji, style: const TextStyle(fontSize: 22)),
           const SizedBox(width: 10),
+          // Name + progress bar
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -363,10 +553,15 @@ class _RemoteRow extends StatelessWidget {
                     minHeight: 5,
                   ),
                 ),
+                const SizedBox(height: 2),
+                Text(score.category.toUpperCase(),
+                    style: const TextStyle(
+                        color: Colors.white24, fontSize: 10, letterSpacing: 1)),
               ],
             ),
           ),
           const SizedBox(width: 12),
+          // Score
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -376,129 +571,6 @@ class _RemoteRow extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                       fontSize: 16)),
               Text('${score.percentage}%',
-                  style: TextStyle(color: barColor, fontSize: 12)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Local (session) tab ───────────────────────────────────────────────────────
-
-class _LocalLeaderboard extends StatelessWidget {
-  final List<LeaderboardEntry> entries;
-  const _LocalLeaderboard({required this.entries});
-
-  @override
-  Widget build(BuildContext context) {
-    if (entries.isEmpty) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text('📱', style: TextStyle(fontSize: 56)),
-            SizedBox(height: 16),
-            Text('No scores this session yet!',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold)),
-            SizedBox(height: 8),
-            Text('Play a round to get on the board.',
-                style: TextStyle(color: Colors.white54)),
-          ],
-        ),
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 14),
-      itemCount: entries.length,
-      itemBuilder: (_, i) => _LocalRow(entry: entries[i], rank: i + 1),
-    );
-  }
-}
-
-class _LocalRow extends StatelessWidget {
-  final LeaderboardEntry entry;
-  final int rank;
-  const _LocalRow({required this.entry, required this.rank});
-
-  Color get _rankColor {
-    if (rank == 1) return const Color(0xFFFFD700);
-    if (rank == 2) return const Color(0xFFC0C0C0);
-    if (rank == 3) return const Color(0xFFCD7F32);
-    return Colors.white38;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final pct = entry.percentage;
-    final barColor = pct >= 0.8
-        ? Colors.greenAccent
-        : pct >= 0.5
-            ? Colors.orange
-            : Colors.redAccent;
-
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 5),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A242F),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: rank <= 3
-              ? _rankColor.withValues(alpha: 0.4)
-              : Colors.white12,
-        ),
-      ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 32,
-            child: Text('#$rank',
-                style: TextStyle(
-                    color: _rankColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15)),
-          ),
-          Text(entry.categoryEmoji,
-              style: const TextStyle(fontSize: 22)),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(entry.name,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15)),
-                const SizedBox(height: 5),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(3),
-                  child: LinearProgressIndicator(
-                    value: pct,
-                    backgroundColor: Colors.white12,
-                    valueColor: AlwaysStoppedAnimation<Color>(barColor),
-                    minHeight: 5,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(entry.scoreLabel,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16)),
-              Text('${(pct * 100).round()}%',
                   style: TextStyle(color: barColor, fontSize: 12)),
             ],
           ),
