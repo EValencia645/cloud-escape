@@ -19,7 +19,7 @@ class Category {
   final String emoji;
   final String title;
   final String roomName;
-  final List<Question> questions; // full bank (20)
+  final List<Question> questions; // full bank (30)
 
   // Not const — keeps questions as a runtime list so shuffling always works
   Category({
@@ -33,7 +33,7 @@ class Category {
   /// Returns a shuffled random sample of [count] questions from the bank.
   /// Uses a time-based seed so each call produces a genuinely different order,
   /// including on Flutter web where Random() can be deterministic.
-  List<Question> randomSample({int count = 10}) {
+  List<Question> randomSample({int count = 20}) {
     final rng = Random(DateTime.now().microsecondsSinceEpoch);
     final shuffled = [...questions]..shuffle(rng);
     return shuffled.take(count).toList();
@@ -225,6 +225,107 @@ final List<Category> allCategories = [
         ],
         correctIndex: 1,
         meme: '📈 Auto Scaling: Your app handles Black Friday traffic without you panic-clicking.',
+      ),
+      // ── 10 more AWS questions ─────────────────────────────────────────────
+      Question(
+        question: 'What is AWS Step Functions used for?',
+        options: [
+          'Storing step-by-step documentation',
+          'Coordinating multi-step serverless workflows',
+          'Monitoring Lambda execution time',
+          'Managing EC2 instance states',
+        ],
+        correctIndex: 1,
+        meme: '🪜 Step Functions: Workflow orchestration so your Lambdas stop calling each other directly like barbarians.',
+      ),
+      Question(
+        question: 'What does Amazon ElastiCache provide?',
+        options: [
+          'Long-term cold storage',
+          'In-memory caching to speed up applications',
+          'Automated database backups',
+          'CDN for static assets',
+        ],
+        correctIndex: 1,
+        meme: '⚡ ElastiCache: RAM-speed data. Because your database is tired of answering the same question.',
+      ),
+      Question(
+        question: 'What is the purpose of an AWS Availability Zone?',
+        options: [
+          'A pricing tier for reserved instances',
+          'An isolated data center location for fault tolerance',
+          'A region-wide backup system',
+          'A virtual private network endpoint',
+        ],
+        correctIndex: 1,
+        meme: '🏗️ Availability Zones: Because putting all your eggs in one data center is a bad idea.',
+      ),
+      Question(
+        question: 'Which AWS service provides a managed message broker?',
+        options: ['SQS', 'SNS', 'Amazon MQ', 'Kinesis'],
+        correctIndex: 2,
+        meme: '📨 Amazon MQ: For when you need RabbitMQ but don\'t want to babysit the server.',
+      ),
+      Question(
+        question: 'What is AWS WAF?',
+        options: [
+          'A data warehouse service',
+          'A web application firewall that filters malicious traffic',
+          'A workflow automation framework',
+          'A managed VPN service',
+        ],
+        correctIndex: 1,
+        meme: '🛡️ WAF: The bouncer that reads HTTP requests instead of IDs.',
+      ),
+      Question(
+        question: 'What does Amazon Kinesis do?',
+        options: [
+          'Runs containerised workloads',
+          'Processes real-time streaming data',
+          'Manages DNS records',
+          'Stores archival backups',
+        ],
+        correctIndex: 1,
+        meme: '🌊 Kinesis: Because sometimes your data arrives faster than you can say "batch job".',
+      ),
+      Question(
+        question: 'What is an S3 bucket policy used for?',
+        options: [
+          'Setting storage class of objects',
+          'Controlling access permissions to the bucket',
+          'Enabling versioning on objects',
+          'Configuring static website hosting',
+        ],
+        correctIndex: 1,
+        meme: '📜 S3 bucket policy: The fine print that decides who gets to touch your files.',
+      ),
+      Question(
+        question: 'Which AWS service manages SSL/TLS certificates for free?',
+        options: ['IAM', 'KMS', 'ACM (Certificate Manager)', 'Secrets Manager'],
+        correctIndex: 2,
+        meme: '🔏 ACM: Free SSL certs, auto-renewed. No more 2 AM "your cert expired" panic.',
+      ),
+      Question(
+        question: 'What is AWS Secrets Manager used for?',
+        options: [
+          'Encrypting S3 objects',
+          'Storing and rotating sensitive credentials securely',
+          'Managing IAM user passwords',
+          'Logging API calls',
+        ],
+        correctIndex: 1,
+        meme: '🤫 Secrets Manager: For when hardcoding passwords in your repo finally gets embarrassing.',
+      ),
+      Question(
+        question: 'What is the purpose of an AWS Transit Gateway?',
+        options: [
+          'Connecting on-premises networks to the internet',
+          'Centrally connecting multiple VPCs and on-premises networks',
+          'Managing API routing rules',
+          'Providing dedicated connections to AWS',
+        ],
+        correctIndex: 1,
+        meme: '🔀 Transit Gateway: The hub-and-spoke model for people tired of peering every VPC manually.',
       ),
     ],
   ),
@@ -454,6 +555,117 @@ final List<Category> allCategories = [
         correctIndex: 1,
         meme: '📲 SMS 2FA: Better than nothing. Worse than an authenticator app. Still use it.',
       ),
+      // ── 10 more Security questions ────────────────────────────────────────
+      Question(
+        question: 'What is a honeypot in cybersecurity?',
+        options: [
+          'A sweet-sounding malware strain',
+          'A decoy system designed to lure and detect attackers',
+          'An encrypted password storage method',
+          'A type of network proxy',
+        ],
+        correctIndex: 1,
+        meme: '🍯 Honeypot: "Come in, hackers, everything is fine here." — definitely not a trap.',
+      ),
+      Question(
+        question: 'What does PII stand for?',
+        options: [
+          'Private Internet Infrastructure',
+          'Personally Identifiable Information',
+          'Protected IP Interface',
+          'Primary Identity Index',
+        ],
+        correctIndex: 1,
+        meme: '🪪 PII: Your name, email, SSN — stuff you really don\'t want in a breach. Guard it.',
+      ),
+      Question(
+        question: 'What is penetration testing?',
+        options: [
+          'Testing network bandwidth limits',
+          'Authorised simulated attacks to find security vulnerabilities',
+          'Stress-testing a web server',
+          'Scanning for malware on endpoints',
+        ],
+        correctIndex: 1,
+        meme: '🔓 Pen testing: Getting paid to hack things legally. The dream job.',
+      ),
+      Question(
+        question: 'What is an intrusion detection system (IDS)?',
+        options: [
+          'A firewall that blocks all traffic',
+          'A system that monitors for suspicious activity and alerts',
+          'A VPN tunnel manager',
+          'An antivirus scanning engine',
+        ],
+        correctIndex: 1,
+        meme: '🚨 IDS: The smoke alarm of your network. Loud, sometimes annoying, but glad it\'s there.',
+      ),
+      Question(
+        question: 'What does "salting" a password mean?',
+        options: [
+          'Encrypting it with AES-256',
+          'Adding a random value before hashing to prevent rainbow table attacks',
+          'Storing it in plain text with a prefix',
+          'Applying two rounds of MD5',
+        ],
+        correctIndex: 1,
+        meme: '🧂 Password salting: Making sure two identical passwords hash differently. Gordon Ramsay approves.',
+      ),
+      Question(
+        question: 'What is a security token in AWS?',
+        options: [
+          'A physical USB key for MFA',
+          'A temporary credential used to access AWS resources',
+          'An encrypted API key stored in S3',
+          'A certificate for SSL/TLS',
+        ],
+        correctIndex: 1,
+        meme: '🎟️ Security token: A temporary VIP pass that expires before you can do too much damage.',
+      ),
+      Question(
+        question: 'What is the purpose of a DMZ in network security?',
+        options: [
+          'To speed up internal network traffic',
+          'A buffer zone between the public internet and internal network',
+          'To encrypt all outbound traffic',
+          'To store sensitive data safely',
+        ],
+        correctIndex: 1,
+        meme: '🏚️ DMZ: The neighbourhood between the internet and your sensitive stuff. Rough area.',
+      ),
+      Question(
+        question: 'What does "defence in depth" mean?',
+        options: [
+          'Using the strongest single security control available',
+          'Layering multiple security controls so failing one doesn\'t expose everything',
+          'Encrypting data three times',
+          'Running security audits quarterly',
+        ],
+        correctIndex: 1,
+        meme: '🧅 Defence in depth: Like an onion — lots of layers, makes attackers cry.',
+      ),
+      Question(
+        question: 'What is a security audit?',
+        options: [
+          'An automated malware scan',
+          'A systematic review of security policies, controls, and systems',
+          'A firewall rule update process',
+          'A password rotation schedule',
+        ],
+        correctIndex: 1,
+        meme: '📋 Security audit: The annual event where everyone panics and updates their passwords.',
+      ),
+      Question(
+        question: 'What is credential stuffing?',
+        options: [
+          'Filling out login forms automatically for testing',
+          'Using leaked username/password pairs to try to access other services',
+          'Storing credentials in environment variables',
+          'Brute-forcing a single account repeatedly',
+        ],
+        correctIndex: 1,
+        meme: '🧳 Credential stuffing: "You reused that password? Let me try it on your bank." — hackers, probably.',
+      ),
     ],
   ),
 
@@ -636,6 +848,112 @@ final List<Category> allCategories = [
         options: ['touch', 'newdir', 'mkdir', 'md'],
         correctIndex: 2,
         meme: '📁 mkdir: Creating folders like it\'s 1969. mkdir -p is the power move.',
+      ),
+      // ── 10 more Linux questions ───────────────────────────────────────────
+      Question(
+        question: 'What does the ">" operator do in a shell command?',
+        options: [
+          'Appends output to a file',
+          'Redirects output to a file, overwriting it',
+          'Pipes output to another command',
+          'Compares two values',
+        ],
+        correctIndex: 1,
+        meme: '📄 >: Redirect operator. Overwrites without asking. Learned that one the hard way.',
+      ),
+      Question(
+        question: 'What is the difference between ">" and ">>" in shell?',
+        options: [
+          '">" appends, ">>" overwrites',
+          '">" overwrites, ">>" appends',
+          'They are identical',
+          '">" is for files, ">>" is for directories',
+        ],
+        correctIndex: 1,
+        meme: '📝 >>: Appends to a file. The responsible sibling of >.',
+      ),
+      Question(
+        question: 'Which command shows network connections and listening ports?',
+        options: ['ifconfig', 'ping', 'netstat', 'traceroute'],
+        correctIndex: 2,
+        meme: '🔌 netstat: "What is MY computer talking to?" Great question. Sometimes terrifying answer.',
+      ),
+      Question(
+        question: 'What does "kill -9" do?',
+        options: [
+          'Pauses a process',
+          'Sends a graceful shutdown signal',
+          'Forcefully terminates a process immediately',
+          'Lowers process priority',
+        ],
+        correctIndex: 2,
+        meme: '💀 kill -9: The "I said STOP" of process management. No questions asked.',
+      ),
+      Question(
+        question: 'What is /dev/null in Linux?',
+        options: [
+          'A file containing system error logs',
+          'A virtual device that discards all data written to it',
+          'The default home directory',
+          'A null pointer reference in kernel space',
+        ],
+        correctIndex: 1,
+        meme: '🕳️ /dev/null: The black hole of Linux. Where output goes to die quietly.',
+      ),
+      Question(
+        question: 'What does "df -h" show?',
+        options: [
+          'Directory file permissions in human-readable format',
+          'Disk filesystem usage in human-readable format',
+          'Default file handler settings',
+          'Detailed file history',
+        ],
+        correctIndex: 1,
+        meme: '💽 df -h: "How full is my disk?" — asked every sysadmin ever, usually too late.',
+      ),
+      Question(
+        question: 'What is a symbolic link (symlink) in Linux?',
+        options: [
+          'A compressed copy of a file',
+          'A shortcut that points to another file or directory',
+          'A hidden system file',
+          'A read-only file reference',
+        ],
+        correctIndex: 1,
+        meme: '🔗 Symlink: A pointer to a file. Like a shortcut, but cooler and with more edge cases.',
+      ),
+      Question(
+        question: 'What does "env" command show?',
+        options: [
+          'Installed packages',
+          'Current environment variables',
+          'Kernel environment settings',
+          'Network environment configuration',
+        ],
+        correctIndex: 1,
+        meme: '🌿 env: All your environment variables, including the secrets you forgot were in there.',
+      ),
+      Question(
+        question: 'What does "history" command do in Linux?',
+        options: [
+          'Shows file modification history',
+          'Displays previously run shell commands',
+          'Lists recently accessed files',
+          'Shows system boot history',
+        ],
+        correctIndex: 1,
+        meme: '📜 history: A journal of every command you\'ve run. Including the embarrassing ones.',
+      ),
+      Question(
+        question: 'What is the purpose of /etc/hosts?',
+        options: [
+          'Lists all system users',
+          'Maps hostnames to IP addresses locally',
+          'Stores SSH known hosts',
+          'Configures DNS nameservers',
+        ],
+        correctIndex: 1,
+        meme: '📖 /etc/hosts: The OG DNS. Predates the internet. Still works. Respect.',
       ),
     ],
   ),
@@ -844,6 +1162,112 @@ final List<Category> allCategories = [
         ],
         correctIndex: 1,
         meme: '🛣️ Bandwidth: The width of your internet highway. More lanes = more data.',
+      ),
+      // ── 10 more Networking questions ──────────────────────────────────────
+      Question(
+        question: 'What is a proxy server?',
+        options: [
+          'A server that stores database backups',
+          'An intermediary server that forwards requests on behalf of clients',
+          'A server dedicated to DNS resolution',
+          'A load balancer for web traffic',
+        ],
+        correctIndex: 1,
+        meme: '🎭 Proxy: "I\'ll go ask for you." Useful for privacy, caching, and bypassing geo-blocks.',
+      ),
+      Question(
+        question: 'What does ARP stand for?',
+        options: [
+          'Automatic Routing Protocol',
+          'Address Resolution Protocol',
+          'Advanced Relay Process',
+          'Application Request Protocol',
+        ],
+        correctIndex: 1,
+        meme: '📣 ARP: "Who has this IP? Tell me their MAC." The local network\'s missing persons bureau.',
+      ),
+      Question(
+        question: 'What is a VLAN?',
+        options: [
+          'A virtual WAN connection',
+          'A logical network segment that groups devices independently of physical location',
+          'A type of VPN tunnel',
+          'A wireless LAN standard',
+        ],
+        correctIndex: 1,
+        meme: '🏘️ VLAN: Putting devices in separate neighbourhoods without buying new switches.',
+      ),
+      Question(
+        question: 'What port does FTP use by default?',
+        options: ['20/21', '22', '25', '110'],
+        correctIndex: 0,
+        meme: '📁 FTP port 21: Ancient file transfer protocol. Still alive, somehow. Use SFTP instead.',
+      ),
+      Question(
+        question: 'What is a default gateway?',
+        options: [
+          'The primary DNS server on a network',
+          'The router that traffic is sent to when there is no specific route',
+          'The first IP address in a subnet',
+          'A firewall\'s public IP address',
+        ],
+        correctIndex: 1,
+        meme: '🚪 Default gateway: "I don\'t know where this goes, send it to the router." — your PC.',
+      ),
+      Question(
+        question: 'What does traceroute (or tracert) do?',
+        options: [
+          'Tests if a host is online',
+          'Shows the path packets take to reach a destination',
+          'Measures download speed',
+          'Lists open ports on a remote host',
+        ],
+        correctIndex: 1,
+        meme: '🗺️ Traceroute: Watching your packet bounce around the world before reaching its destination.',
+      ),
+      Question(
+        question: 'What is the purpose of port 3306?',
+        options: [
+          'HTTPS traffic',
+          'MySQL database connections',
+          'SSH remote access',
+          'Email sending (SMTP)',
+        ],
+        correctIndex: 1,
+        meme: '🐬 Port 3306: MySQL\'s home. Don\'t expose it to the internet. Seriously.',
+      ),
+      Question(
+        question: 'What is network segmentation?',
+        options: [
+          'Splitting bandwidth evenly across devices',
+          'Dividing a network into smaller zones to limit access and contain breaches',
+          'Compressing network packets',
+          'Prioritising video traffic on a network',
+        ],
+        correctIndex: 1,
+        meme: '🧱 Network segmentation: Compartmentalising your network so one breach doesn\'t take everything down.',
+      ),
+      Question(
+        question: 'What does "nslookup" do?',
+        options: [
+          'Scans open ports on a host',
+          'Queries DNS to resolve domain names to IP addresses',
+          'Shows network interface statistics',
+          'Tests HTTP response times',
+        ],
+        correctIndex: 1,
+        meme: '🔍 nslookup: "What IP hides behind that domain?" DNS detective work from the terminal.',
+      ),
+      Question(
+        question: 'What is Quality of Service (QoS) in networking?',
+        options: [
+          'A metric for measuring ISP uptime',
+          'Prioritising certain types of traffic to ensure performance',
+          'Encrypting traffic by traffic type',
+          'Monitoring network health dashboards',
+        ],
+        correctIndex: 1,
+        meme: '🎬 QoS: Making sure your video call doesn\'t freeze when someone downloads a Linux ISO.',
       ),
     ],
   ),

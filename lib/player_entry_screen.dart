@@ -72,7 +72,7 @@ class PlayerEntryScreen extends StatelessWidget {
                     style: const TextStyle(
                         color: Colors.white54, fontSize: 14),
                     children: [
-                      const TextSpan(text: '10 random questions from a pool of '),
+                      const TextSpan(text: '20 random questions from a pool of '),
                       TextSpan(
                         text: '${category.questions.length}',
                         style: TextStyle(
