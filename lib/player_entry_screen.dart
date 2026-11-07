@@ -19,8 +19,8 @@ class PlayerEntryScreen extends StatelessWidget {
   }
 
   void _start(BuildContext context) {
-    // Shuffle the full bank and pick 10 — fresh every time
-    final randomQuestions = category.randomSample(count: 10);
+    // Shuffle the full bank and pick 20 — fresh every time
+    final randomQuestions = category.randomSample(count: 20);
 
     Navigator.pushReplacement(
       context,
