@@ -86,11 +86,15 @@ class LeaderboardService {
       body: jsonEncode({'name': name}),
     ).timeout(const Duration(seconds: 10));
 
-    if (res.statusCode != 201) {
-      throw Exception('Failed to create session: ${res.statusCode}');
+    if (res.statusCode != 200 && res.statusCode != 201) {
+      throw Exception('Failed to create session (${res.statusCode}): ${res.body}');
     }
-    final data = jsonDecode(res.body) as Map<String, dynamic>;
-    _activeSession = GameSession.fromJson(data);
+
+    final decoded = jsonDecode(res.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw Exception('Unexpected response: ${res.body}');
+    }
+    _activeSession = GameSession.fromJson(decoded);
     return _activeSession!;
   }
 

@@ -49,7 +49,9 @@ const err = (msg, status = 400) => ok({ error: msg }, status);
 export const handler = async (event) => {
   const method   = (event.httpMethod ?? event.requestContext?.http?.method ?? "GET").toUpperCase();
   const rawPath  = event.path ?? event.rawPath ?? "/";
-  const segments = rawPath.replace(/^\//, "").split("/"); // ["sessions","abc"] etc.
+  // Strip stage prefix (e.g. /prod/sessions → /sessions)
+  const path     = rawPath.replace(/^\/[^/]+(?=\/)/, '');
+  const segments = path.replace(/^\//, "").split("/"); // ["sessions","abc"] etc.
   const qs       = event.queryStringParameters ?? {};
 
   if (method === "OPTIONS") return ok({});
