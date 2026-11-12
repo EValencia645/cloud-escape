@@ -31,13 +31,40 @@ class Category {
   });
 
   /// Returns a shuffled random sample of [count] questions from the bank.
-  /// Uses a time-based seed so each call produces a genuinely different order,
-  /// including on Flutter web where Random() can be deterministic.
+  /// Both the question order AND the answer options are shuffled per call,
+  /// so the correct answer lands on a different letter (A/B/C/D) every time.
   List<Question> randomSample({int count = 20}) {
     final rng = Random(DateTime.now().microsecondsSinceEpoch);
-    final shuffled = [...questions]..shuffle(rng);
-    return shuffled.take(count).toList();
+
+    // 1 — shuffle which questions appear
+    final shuffledQuestions = [...questions]..shuffle(rng);
+
+    // 2 — for each selected question, shuffle its answer options
+    return shuffledQuestions.take(count).map((q) {
+      // Build an indexed list so we can track where the correct answer moves
+      final indexed = List.generate(
+        q.options.length,
+        (i) => _IndexedOption(i, q.options[i]),
+      )..shuffle(rng);
+
+      final newOptions     = indexed.map((o) => o.text).toList();
+      final newCorrectIdx  = indexed.indexWhere((o) => o.originalIndex == q.correctIndex);
+
+      return Question(
+        question:     q.question,
+        options:      newOptions,
+        correctIndex: newCorrectIdx,
+        meme:         q.meme,
+      );
+    }).toList();
   }
+}
+
+/// Helper to track an option's original index through a shuffle.
+class _IndexedOption {
+  final int    originalIndex;
+  final String text;
+  _IndexedOption(this.originalIndex, this.text);
 }
 
 final List<Category> allCategories = [

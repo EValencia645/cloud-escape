@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'nickname_screen.dart';
 import 'category_screen.dart';
 import 'leaderboard_screen.dart';
@@ -148,7 +149,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: TextStyle(color: Colors.white54, fontSize: 13)),
             const SizedBox(height: 8),
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
               decoration: BoxDecoration(
                 color: const Color(0xFF232F3E),
                 borderRadius: BorderRadius.circular(8),
@@ -158,7 +159,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Row(
                 children: [
                   Expanded(
-                    child: Text(
+                    child: SelectableText(
                       session.sessionId,
                       style: const TextStyle(
                           color: Color(0xFFFF9900),
@@ -166,6 +167,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           fontFamily: 'monospace'),
                     ),
                   ),
+                  _CopyButton(text: session.sessionId),
                 ],
               ),
             ),
@@ -460,6 +462,50 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ── Copy button ───────────────────────────────────────────────────────────────
+
+class _CopyButton extends StatefulWidget {
+  final String text;
+  const _CopyButton({required this.text});
+
+  @override
+  State<_CopyButton> createState() => _CopyButtonState();
+}
+
+class _CopyButtonState extends State<_CopyButton> {
+  bool _copied = false;
+
+  Future<void> _copy() async {
+    await Clipboard.setData(ClipboardData(text: widget.text));
+    if (!mounted) return;
+    setState(() => _copied = true);
+    await Future.delayed(const Duration(seconds: 2));
+    if (mounted) setState(() => _copied = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: _copied ? 'Copied!' : 'Copy to clipboard',
+      child: IconButton(
+        onPressed: _copy,
+        icon: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          child: Icon(
+            _copied ? Icons.check : Icons.copy,
+            key: ValueKey(_copied),
+            color: _copied ? Colors.greenAccent : const Color(0xFFFF9900),
+            size: 18,
+          ),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        constraints: const BoxConstraints(),
+        splashRadius: 18,
       ),
     );
   }
